@@ -1,29 +1,4 @@
-# TP : Injection des dépendances - Couplage faible
 
-##  Objectif
-Comprendre le principe du couplage faible et l'injection des dépendances en Java :
-- Instanciation statique
-- Instanciation dynamique
-- Utilisation du framework Spring (XML et annotations)
-
-## Rôle général des packages
-
-- **dao**  
-  Couche d’accès aux données (Data Access Object).  
-  Elle est responsable de la récupération des données depuis une source (base de données, fichier, service externe, ou valeur simulée dans ce TP).  
-  Cette couche isole la logique d’accès aux données du reste de l’application.
-
-- **metier**  
-  Couche métier (Business Layer).  
-  Elle contient la logique métier de l’application, c’est-à-dire les traitements et calculs réalisés à partir des données récupérées par la couche DAO.  
-  Elle dépend d’une abstraction (interface) pour assurer un couplage faible.
-
-- **presentation**  
-  Couche présentation.  
-  Elle permet de tester et d’exécuter l’application.  
-  C’est dans cette couche que l’on effectue l’injection des dépendances (statique, dynamique ou via Spring).
-
-#  1 : Création de l'interface IDao avec une méthode getData
 # TP : Injection des Dépendances — Couplage Faible
 
 ## Objectif
@@ -34,7 +9,6 @@ Comprendre le principe du couplage faible et l'injection des dépendances en Jav
 - Instanciation dynamique
 - Utilisation du framework Spring (XML et annotations)
 
----
 
 ## Rôle général des packages
 
@@ -50,7 +24,7 @@ Elle contient la logique métier de l'application, c'est-à-dire les traitements
 
 Elle permet de tester et d'exécuter l'application. C'est dans cette couche que l'on effectue l'injection des dépendances (statique, dynamique ou via Spring).
 
----
+
 
 ## Étape 1 : Création de l'interface `IDao`
 
@@ -99,14 +73,68 @@ public class DaoImpl implements IDao {
 > En d'autres termes : l'interface est le **plan**, l'implémentation est la **construction**. On peut reconstruire différemment (base de données, fichier, API…) sans jamais changer le plan.
 
 
-## Principe clé : programmer vers l'abstraction
+
+## Étape 3 : Création de l'interface `IMetier`
+
+L'interface `IMetier` définit le contrat de la **couche métier**. Elle expose une méthode `calcul()` qui représente le traitement métier à effectuer.
 
 ```java
-// ✅ Bonne pratique — couplage faible
-IDao dao = new DaoImpl();
-
-// ❌ Mauvaise pratique — couplage fort
-DaoImpl dao = new DaoImpl();
+public interface IMetier {
+    double calcul();
+}
 ```
 
-En déclarant la variable avec le type `IDao`, on peut **substituer** `DaoImpl` par n'importe quelle autre implémentation sans modifier le reste du code.
+### Pourquoi une interface ici aussi ?
+
+De la même façon que pour la couche DAO, utiliser une interface pour la couche métier permet de :
+
+- Découpler la couche présentation de la logique métier
+- Faciliter les tests (on peut injecter un faux objet métier)
+- Respecter le principe de **programmation vers l'abstraction**
+
+
+
+## Étape 4 : Implémentation de `IMetier` avec couplage faible — `MetierImpl`
+
+`MetierImpl` implémente la logique métier en s'appuyant sur la couche DAO via l'interface `IDao`, et non sur une implémentation concrète. C'est ce qui garantit le **couplage faible**.
+
+```java
+package net.ouaksim.metier;
+
+import net.ouaksim.dao.IDao;
+
+public class MetierImpl implements IMetier {
+    private IDao dao;
+
+    public MetierImpl(IDao dao) {
+        this.dao = dao;
+    }
+
+    @Override
+    public double calcul() {
+        double data = dao.getData();
+        return data * 43 / 3;
+    }
+}
+```
+
+### Comment le couplage faible est-il appliqué ici ?
+
+| Élément | Détail |
+|---|---|
+| **Type de `dao`** | `IDao` (interface) et non `DaoImpl` (classe concrète) |
+| **Injection** | La dépendance est passée via le **constructeur**, pas instanciée en interne |
+| **Conséquence** | On peut changer la source de données sans modifier `MetierImpl` |
+
+### Injection par constructeur
+
+```java
+// MetierImpl ne sait pas QUI lui fournit les données
+// Il sait juste que l'objet respecte le contrat IDao
+public MetierImpl(IDao dao) {
+    this.dao = dao;
+}
+```
+
+> `MetierImpl` ne fait jamais `new DaoImpl()` en interne — c'est l'appelant qui décide quelle implémentation de `IDao` injecter. C'est le principe fondamental de l'**injection de dépendances**.
+
