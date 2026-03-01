@@ -192,3 +192,43 @@ public class DynamicPresentation {
 ```
 
 > Pour changer d'implémentation (ex. passer de `DaoImpl` à `DaoImplV2`), il suffit de modifier **une seule ligne dans `config.txt`** — aucune modification du code Java, aucune recompilation.
+
+### 5c. Injection avec Spring — Version XML
+
+Spring est un **framework d'injection de dépendances** qui automatise la création et l'assemblage des objets (appelés **beans**). Dans la version XML, la configuration est externalisée dans un fichier `config.xml` où l'on déclare les beans et leurs dépendances.
+
+Spring lit ce fichier au démarrage, instancie les objets dans le bon ordre et injecte automatiquement les dépendances. Le code Java ne contient aucune référence aux classes concrètes — Spring joue le rôle d'**assembleur**.
+
+
+```java
+public class PresSpringXml {
+    public static void main(String[] args) {
+        // Spring lit config.xml, crée et assemble les beans automatiquement
+        ApplicationContext springContext = new ClassPathXmlApplicationContext("config.xml");
+
+        IMetier metier = (IMetier) springContext.getBean("metier");
+        System.out.println(metier.calcul());
+    }
+}
+```
+
+> `springContext.getBean("metier")` retourne le bean assemblé par Spring — `MetierImpl` reçoit déjà son `IDao` injecté, sans que la couche présentation s'en préoccupe.
+
+
+### 5d. Injection avec Spring — Version annotations
+
+Au lieu du fichier XML, on utilise des **annotations** directement dans le code Java pour déclarer les beans et injecter les dépendances. Les principales annotations utilisées sont `@Repository` (couche DAO), `@Service` (couche métier) et `@Autowired` (injection automatique). Spring scanne les packages grâce à `@ComponentScan` et construit le contexte applicatif sans configuration externe.
+
+C'est l'approche la plus **moderne et recommandée** : elle est plus concise, plus lisible et élimine complètement le besoin de fichier XML.
+
+
+## Comparaison des quatre méthodes
+
+| Méthode | Recompilation nécessaire ? | Fichier de config externe ? | Complexité | Usage typique |
+|---|---|---|---|---|
+| **Statique** |  Oui |  Non | Faible | Prototypage, petits projets |
+| **Dynamique** |  Non |  Oui (`.txt`) | Moyenne | Compréhension de la réflexion Java |
+| **Spring XML** |  Non |  Oui (`.xml`) | Moyenne | Projets Spring legacy |
+| **Spring Annotations** |  Non |  Non | Faible | Projets Spring modernes |
+
+> **Recommandation** : Dans un projet Spring moderne, on privilégie toujours la version **annotations**, plus concise et plus maintenable que la version XML.
