@@ -138,3 +138,57 @@ public MetierImpl(IDao dao) {
 
 > `MetierImpl` ne fait jamais `new DaoImpl()` en interne — c'est l'appelant qui décide quelle implémentation de `IDao` injecter. C'est le principe fondamental de l'**injection de dépendances**.
 
+
+## Étape 5 : Injection des dépendances
+
+L'injection des dépendances consiste à **fournir de l'extérieur** les objets dont une classe a besoin, plutôt que de les instancier elle-même. On présente ici quatre approches.
+
+
+### 5a. Instanciation statique
+
+L'injection est réalisée **manuellement dans le code** : le développeur crée les objets avec `new` et les passe explicitement au constructeur. Tout est connu et câblé à la **compilation**.
+
+C'est l'approche la plus simple, mais elle introduit un couplage fort au niveau de la couche présentation, car les classes concrètes (`DaoImpl`, `MetierImpl`) y sont directement référencées. Tout changement d'implémentation impose une **recompilation**.
+
+```java
+
+public class StaticPresentation {
+    public static void main(String[] args) {
+//        DaoImpl dao = new DaoImpl();       // ← ancienne implémentation
+        DaoImplV2 dao = new DaoImplV2();    // ← nouvelle implémentation (nécessite recompilation)
+        IMetier metier = new MetierImpl(dao); // Injection statique via le constructeur
+        System.out.println("Résultat calcul (statique) : " + metier.calcul());
+    }
+}
+```
+
+> Le commentaire sur `DaoImpl` illustre bien le problème : pour changer de source de données, il faut **modifier le code source** et recompiler. C'est ce que les approches suivantes cherchent à éviter.
+
+
+### 5b. Instanciation dynamique
+
+L'injection est réalisée **à l'exécution** grâce à la **réflexion Java** (`Class.forName`). Le nom complet des classes à instancier est lu depuis un fichier de configuration externe (ex. `config.txt`). Le code de présentation ne manipule que des **interfaces**, il ne connaît jamais les classes concrètes.
+
+Changer d'implémentation se fait simplement en modifiant le fichier de configuration, **sans recompiler**. C'est une approche pédagogique qui illustre bien le principe du couplage faible, mais elle reste manuelle comparée à Spring.
+
+**Fichier `config.txt` :**
+
+```
+net.ouaksim.dao.DaoImpl
+```
+
+```java
+
+public class DynamicPresentation {
+    public static void main(String[] args) throws FileNotFoundException, ClassNotFoundException, InstantiationException, IllegalAccessException {
+        Scanner scan = new Scanner(new File("config.txt"));
+
+        String daoClassName = scan.nextLine();       // Lecture du nom de classe depuis config.txt
+        Class cDao = Class.forName(daoClassName);    // Chargement dynamique de la classe
+        IDao dao = (IDao) cDao.newInstance();        // Instanciation via la réflexion Java
+        System.out.println(dao.getData());
+    }
+}
+```
+
+> Pour changer d'implémentation (ex. passer de `DaoImpl` à `DaoImplV2`), il suffit de modifier **une seule ligne dans `config.txt`** — aucune modification du code Java, aucune recompilation.

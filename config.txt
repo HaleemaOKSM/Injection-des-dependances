@@ -1,0 +1,3 @@
+net.ouaksim.dao.DaoImpl
+net.ouaksim.matier.MetierImpl
+
